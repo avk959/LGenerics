@@ -46,25 +46,41 @@ type
     function ToString(aSkipBrackets: Boolean = False): string;
   end;
 
+{$IF DECLARED(TAnsiStringHelper)}
+  TAStrHelper = type helper(TAnsiStringHelper) for ansistring
+{$ELSE}
   TAStrHelper = type helper(TStringHelper) for ansistring
+{$ENDIF}
     class function HashCode(const aValue: ansistring): SizeInt; static; inline;
     class function Equal(const L, R: ansistring): Boolean; static; inline;
     class function Less(const L, R: ansistring): Boolean; static;
   end;
 
-  TWStrHelper = type helper{$IF FPC_FULLVERSION>30300}(TWideStringHelper){$ENDIF} for widestring
+{$IF DECLARED(TWideStringHelper)}
+  TWStrHelper = type helper(TWideStringHelper)for widestring
+{$ELSE}
+  TWStrHelper = type helper for widestring
+{$ENDIF}
     class function HashCode(const aValue: widestring): SizeInt; static; inline;
     class function Equal(const L, R: widestring): Boolean; static; inline;
     class function Less(const L, R: widestring): Boolean; static;
   end;
 
-  TUStrHelper = type helper{$IF FPC_FULLVERSION>30300}(TUnicodeStringHelper){$ENDIF} for unicodestring
+{$IF DECLARED(TUnicodeStringHelper)}
+  TUStrHelper = type helper(TUnicodeStringHelper) for unicodestring
+{$ELSE}
+  TUStrHelper = type helper for unicodestring
+{$ENDIF}
     class function HashCode(const aValue: unicodestring): SizeInt; static; inline;
     class function Equal(const L, R: unicodestring): Boolean; static; inline;
     class function Less(const L, R: unicodestring): Boolean; static;
   end;
 
-  TShortStrHelper = type helper{$IF FPC_FULLVERSION>30300}(TShortStringHelper){$ENDIF} for shortstring
+{$IF DECLARED(TShortStringHelper)}
+  TShortStrHelper = type helper(TShortStringHelper) for shortstring
+{$ELSE}
+  TShortStrHelper = type helper for shortstring
+{$ENDIF}
     class function HashCode(const aValue: shortstring): SizeInt; static; inline;
     class function Equal(const L, R: shortstring): Boolean; static; inline;
     class function Less(const L, R: shortstring): Boolean; static; inline;
@@ -451,7 +467,11 @@ type
     class function Less(L, R: TTime): Boolean; static; inline;
   end;
 
-  TGCurrencyHelper = type helper{$IF FPC_FULLVERSION>30300}(TCurrencyHelper){$ENDIF} for Currency
+{$IF DECLARED(TCurrencyHelper)}
+  TGCurrencyHelper = type helper(TCurrencyHelper) for Currency
+{$ELSE}
+  TGCurrencyHelper = type helper for Currency
+{$ENDIF}
   private
     class function GetMaxValue: Currency; static; inline;
     class function GetMinValue: Currency; static; inline;
@@ -459,7 +479,7 @@ type
     class function HashCode(const aValue: Currency): SizeInt; static; inline;
     class function Equal(const L, R: Currency): Boolean; static; inline;
     class function Less(const L, R: Currency): Boolean; static; inline;
-{$IF FPC_FULLVERSION<=30300}
+{$IF NOT DECLARED(TCurrencyHelper)}
     function ToString: string; inline;
 {$ENDIF}
     class property MaxValue: Currency read GetMaxValue;
@@ -2786,7 +2806,7 @@ begin
   Result := L < R;
 end;
 
-{$IF FPC_FULLVERSION<=30300}
+{$IF NOT DECLARED(TCurrencyHelper)}
 function TGCurrencyHelper.ToString: string;
 begin
   Result := CurrToStr(Self);
