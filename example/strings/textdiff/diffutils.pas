@@ -33,7 +33,7 @@ type
   TSeqPatch     = TDiffUtil.TSeqPatch;
   TSeqPatchStat = TDiffUtil.TSeqPatchStat;
   TLcsAlgo      = TDiffUtil.TLcsAlgo;
-  TUcs4Diff     = TUcs4DiffUtil.TDiffV;
+  TUcs4Diff     = TUcs4DiffUtil.TVecDiff;
 
   TLineDiff = record
     Source,

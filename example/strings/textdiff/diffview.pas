@@ -204,7 +204,7 @@ type
   TUtils = specialize TGSeqUtil<TUcs4Pos, TUcs4Pos>;
 var
   s, t: TUcs4PosSeq;
-  dif: TUtils.TDiffV;
+  dif: TUtils.TVecDiff;
   I: SizeInt;
 begin
   s := FilterSeq(aSrc, aFlags);
