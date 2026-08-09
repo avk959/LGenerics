@@ -119,7 +119,7 @@ end;
 procedure TfrmMain.DoUseDiffs;
 var
   SrcSeq, TrgSeq: TUcs4Seq;
-  Diff: TSeqUtil.TDiffV;
+  Diff: TSeqUtil.TVecDiff;
   EditList: array of TEditOp = nil;
   Stat: TSeqStat;
   SrcLen, TrgLen, SrcIdx, TrgIdx, ColIdx: Integer;
