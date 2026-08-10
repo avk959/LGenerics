@@ -3089,7 +3089,7 @@ var
               TEqRel.Equal(aSource[SrcHi + 1], aTarget[TrgHi + 1]) do begin
           Inc(SrcHi); Inc(TrgHi);
           if SrcChainLen[SrcHi] < 0 then
-            ChainLen := SrcChainLen[-SrcChainLen[SrcLo]]
+            ChainLen := SrcChainLen[-SrcChainLen[SrcHi]]
           else
             ChainLen := SrcChainLen[SrcHi];
           if ChainLen < LocChainLen then LocChainLen := ChainLen;
