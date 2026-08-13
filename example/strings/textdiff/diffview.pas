@@ -87,7 +87,7 @@ type
     FChangeList: array of Integer;
     FLineDiffMap: TLineDiffMap;
     FFlags: TDiffFlags;
-    FAlgo: TLcsAlgo;
+    FAlgo: TDiffAlgo;
     FCurrChangeIndex: Integer;
     FAlreadyShown: Boolean;
     function  MakeNodeList(aLines: TStrings): TNodeList;
@@ -98,7 +98,7 @@ type
     procedure ShowDiffs;
     procedure AppShowHint(Sender: TObject);
   public
-    procedure SetViewData(aSrc, aTrg: TStrings; aFont: TFont; aFlags: TDiffFlags; Algo: TLcsAlgo);
+    procedure SetViewData(aSrc, aTrg: TStrings; aFont: TFont; aFlags: TDiffFlags; Algo: TDiffAlgo);
   end;
 
 var
@@ -468,7 +468,10 @@ var
 begin
   Source := MakeNodeList(FSourceLines);
   Target := MakeNodeList(FTargetLines);
-  Patch := TDiffUtil.MakePatch(Source, Target, FStat, FAlgo);
+  if FAlgo in [daGus..daMyers] then
+    Patch := TDiffUtil.MakePatch(Source, Target, FStat, TLcsAlgo(FAlgo))
+  else
+    Patch := TDiffUtil.MakePatch(Source, Target, FStat, TNonLcsDiffAlgo(Ord(FAlgo) - Ord(daPatience)));
   SetLength(FEditList, Length(Source) + FStat[seoInsert]);
   sgSource.BeginUpdate;
   try
@@ -613,7 +616,7 @@ begin
     stbStatus.SimplePanel := False;
 end;
 
-procedure TfrmDiffView.SetViewData(aSrc, aTrg: TStrings; aFont: TFont; aFlags: TDiffFlags; Algo: TLcsAlgo);
+procedure TfrmDiffView.SetViewData(aSrc, aTrg: TStrings; aFont: TFont; aFlags: TDiffFlags; Algo: TDiffAlgo);
 begin
   FSourceLines := aSrc;
   FTargetLines := aTrg;

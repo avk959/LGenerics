@@ -26,14 +26,17 @@ type
   end;
   TNodeList = array of TTextNode;
 
-  TDiffUtil     = specialize TGSeqUtil<TTextNode, TTextNode>;
-  TUcs4DiffUtil = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
-  TSeqEditOp    = TDiffUtil.TSeqEditOp;
-  TSeqEdit      = TDiffUtil.TSeqEdit;
-  TSeqPatch     = TDiffUtil.TSeqPatch;
-  TSeqPatchStat = TDiffUtil.TSeqPatchStat;
-  TLcsAlgo      = TDiffUtil.TLcsAlgo;
-  TUcs4Diff     = TUcs4DiffUtil.TVecDiff;
+  TDiffAlgo = (daGus, daKr, daMyers, daPatience, daHistogram);
+
+  TDiffUtil       = specialize TGSeqUtil<TTextNode, TTextNode>;
+  TUcs4DiffUtil   = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
+  TSeqEditOp      = TDiffUtil.TSeqEditOp;
+  TSeqEdit        = TDiffUtil.TSeqEdit;
+  TSeqPatch       = TDiffUtil.TSeqPatch;
+  TSeqPatchStat   = TDiffUtil.TSeqPatchStat;
+  TLcsAlgo        = TDiffUtil.TLcsAlgo;
+  TNonLcsDiffAlgo = TDiffUtil.TNonLcsDiffAlgo;
+  TUcs4Diff       = TUcs4DiffUtil.TVecDiff;
 
   TLineDiff = record
     Source,

@@ -125,7 +125,7 @@ type
   private
     FDiffFont: TFont;
     FDiffFlags: TDiffFlags;
-    FAlgo: TLcsAlgo;
+    FAlgo: TDiffAlgo;
     procedure ShowStatus;
     procedure AppShowHint(Sender: TObject);
   public
@@ -149,7 +149,7 @@ begin
   Application.Title := 'Text diff demo';
   Application.OnHint := @AppShowHint;
   Caption := 'Text difference test';
-  FAlgo := TLcsAlgo.laMyers;
+  FAlgo := TDiffAlgo.daMyers;
   ShowStatus;
 end;
 

@@ -18,14 +18,14 @@ type
     chgCompareOpts: TCheckGroup;
     rgAlgo: TRadioGroup;
   private
-    function  GetAlgo: TLcsAlgo;
+    function  GetAlgo: TDiffAlgo;
     function  GetDiffFlags: TDiffFlags;
-    procedure SetAlgo(const aValue: TLcsAlgo);
+    procedure SetAlgo(const aValue: TDiffAlgo);
     procedure SetDiffFlags(const aValue: TDiffFlags);
 
   public
     property DiffFlags: TDiffFlags read GetDiffFlags write SetDiffFlags;
-    property DiffAlgo: TLcsAlgo read GetAlgo write SetAlgo;
+    property DiffAlgo: TDiffAlgo read GetAlgo write SetAlgo;
   end;
 
 var
@@ -38,12 +38,12 @@ implementation
 
 { TfrmDiffOptDlg }
 
-function TfrmDiffOptDlg.GetAlgo: TLcsAlgo;
+function TfrmDiffOptDlg.GetAlgo: TDiffAlgo;
 begin
   if rgAlgo.ItemIndex >= 0 then
-    Result := TLcsAlgo(rgAlgo.ItemIndex)
+    Result := TDiffAlgo(rgAlgo.ItemIndex)
   else
-    Result := TLcsAlgo.laGus;
+    Result := TDiffAlgo.daGus;
 end;
 
 function TfrmDiffOptDlg.GetDiffFlags: TDiffFlags;
@@ -56,7 +56,7 @@ begin
       Include(Result, TDiffFlag(I));
 end;
 
-procedure TfrmDiffOptDlg.SetAlgo(const aValue: TLcsAlgo);
+procedure TfrmDiffOptDlg.SetAlgo(const aValue: TDiffAlgo);
 begin
   rgAlgo.ItemIndex := Integer(aValue);
 end;
