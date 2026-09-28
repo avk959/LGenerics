@@ -511,7 +511,8 @@ type
   end;
 
 { allows to register custom function; the function name must contain only lowercase letters
-  from the range a-z, decimal numbers, underscores, and must begin with a letter }
+  from the range a-z, decimal numbers, underscores, and must begin with a letter;
+  the function MUST be defined in such a way that its evaluation has no side effects }
   function JpRegisterFunction(const aName: string; const aFunDef: TJpFunctionDef): Boolean;
 
 { I-Regexp checker: just in case }
